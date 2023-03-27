@@ -15,12 +15,12 @@
 # PART OF THIS FILE AT ALL TIMES.
 
 echo "Preparing dataset..."
-CAL_DATASET=../../data/multi_task_det5_seg16/detection/Waymo_bdd_txt/BDD_Waymo_Cityscape_mixdata/
-WEIGHTS=${1}
+CAL_DATASET=../../data/multi_task_det5_seg16/lane/train/images
+WEIGHTS=../../float6/final.pth
 
 
 echo "Conducting calibration test..."
-IMG_LIST=mix_data.txt
+IMG_LIST=train.txt
 
 shift
 

@@ -14,11 +14,11 @@
 
 # PART OF THIS FILE AT ALL TIMES.
 
-DATASET=../../data/multi_task_det5_seg16/detection/Waymo_bdd_txt/val/
-WEIGHTS=${1}
+DATASET=../../data/multi_task_det5_seg16/detection/val/
+WEIGHTS=../../float6/final.pth
 IMG_LIST=det_val.txt
 GT_FILE=${DATASET}/det_gt.txt
-SAVE_FOLDER=../../results/
+SAVE_FOLDER=../../results
 rm -rf "$SAVE_FOLDER"/det/
 mkdir -p "$SAVE_FOLDER"/det/
 DT_FILE=${SAVE_FOLDER}/det_test_all.txt
@@ -29,7 +29,7 @@ shift
 echo "python -W ignore test.py --i_det --save_folder ${SAVE_FOLDER} --trained_model ${WEIGHTS}  --image_root ${DATASET} --image_list ${IMG_LIST} --img_mode 2 --eval --quant_mode float "$@"" >> ${TEST_LOG}
 python -W ignore test.py --i_det --save_folder ${SAVE_FOLDER} --trained_model ${WEIGHTS}  --image_root ${DATASET} --image_list ${IMG_LIST} --img_mode 2 --eval --quant_mode float "$@"
 cat ${SAVE_FOLDER}/det/* > ${DT_FILE}
-python ./evaluation/evaluate_det.py -gt_file ${GT_FILE} -result_file ${DT_FILE} | tee -a ${TEST_LOG}
+python ./evaluation/evaluate_det.py -gt_file ${GT_FILE} -detection_metric map -result_file ${DT_FILE} | tee ${TEST_LOG}
 echo "Test report is saved to ${TEST_LOG}"
 
 rm -rf "$SAVE_FOLDER"/det/

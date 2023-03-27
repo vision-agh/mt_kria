@@ -370,7 +370,7 @@ class Criterion(torch.nn.Module):
     def forward(self, preds, target):
         h, w = target.size(1), target.size(2)
 
-        scale_pred = F.upsample(input=preds, size=(h, w), mode='bilinear', align_corners=True)
+        scale_pred = F.interpolate(input=preds, size=(h, w), mode='bilinear', align_corners=True)
         loss = self.criterion(scale_pred, target)
         return loss
 
@@ -388,7 +388,7 @@ class LovaszSoftmaxLoss(torch.nn.Module):
     def forward(self, pred, target):
         h, w = target.size(1), target.size(2)
 
-        scale_pred = F.upsample(input=pred, size=(h, w), mode='bilinear', align_corners=True)
+        scale_pred = F.interpolate(input=pred, size=(h, w), mode='bilinear', align_corners=True)
 
         iou_loss = lovasz_softmax(F.softmax(scale_pred, dim=1), target, ignore=self.ignore_index, classes=self.classes,
                                   per_image=self.per_image)

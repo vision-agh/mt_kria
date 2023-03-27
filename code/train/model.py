@@ -117,17 +117,17 @@ class MTNet(nn.Module):
         x = self.resnet50_32s.layer4(x)
         feature3 = x
 
-        top3 = nn.functional.upsample(self.toplayer3(feature3), scale_factor=2)
+        top3 = nn.functional.interpolate(self.toplayer3(feature3), scale_factor=2)
         feature2 = top3 + f2
-        top2 = nn.functional.upsample(self.toplayer2(feature2), scale_factor=2)
+        top2 = nn.functional.interpolate(self.toplayer2(feature2), scale_factor=2)
         feature1 = top2 + f1
-        top1 = nn.functional.upsample(self.toplayer1(feature1), scale_factor=2)
+        top1 = nn.functional.interpolate(self.toplayer1(feature1), scale_factor=2)
         feature0 = top1 + f0
 
-        seg_feature = nn.functional.upsample(self.toplayer0(feature0), scale_factor=2) + f_2s
+        seg_feature = nn.functional.interpolate(self.toplayer0(feature0), scale_factor=2) + f_2s
         logits_2s = self.score_2s(seg_feature)
 
-        seg = nn.functional.upsample(logits_2s, scale_factor=2)
+        seg = nn.functional.interpolate(logits_2s, scale_factor=2)
 
         feature4 = self.conv_block6(feature3)
         feature5 = self.conv_block7(feature4)

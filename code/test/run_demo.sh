@@ -15,7 +15,7 @@
 # PART OF THIS FILE AT ALL TIMES.
 
 DATASET=demo_data/
-WEIGHTS=${1}
+WEIGHTS=../../float6/final.pth
 IMG_LIST=demo_data/demo_list.txt
 CONF_THRESH=0.05
 
@@ -23,4 +23,4 @@ shift
 
 rm -rf demo/*
 
-python -W ignore ./test.py --confidence_threshold ${CONF_THRESH} --trained_model ${WEIGHTS} --image_root ${DATASET} --demo_image_list ${IMG_LIST}  --img_mode 2 --quant_mode float "$@"
+python -W ignore ./test.py --confidence_threshold ${CONF_THRESH} --trained_model ${WEIGHTS} --image_root ${DATASET} --demo_image_list ${IMG_LIST} --img_mode 2 --quant_mode float "$@"

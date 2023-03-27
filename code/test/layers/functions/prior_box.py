@@ -92,12 +92,13 @@ if __name__ == '__main__':
         'k2': 8,
         'act_clip_val': 8,
         'warmup': False,
-        'det_classes': 4,
-        'seg_classes': 16,
-        'seg_drivable': 3,
+        'det_classes': 5,
+        'seg_classes': 6,
+        'drivable_classes': 3,
         'reg_depth': 80,
-        'lr_steps': (50000, 70000, 90000),
-        'max_iter': 100000,
+        'seg_lane': 2,
+        'lr_steps': (12000, 18000),
+        'max_iter': 20010,
         'feature_maps': [(80, 128), (40, 64), (20, 32), (10, 16), (5, 8), (3, 6), (1, 4)],
         'resize': (320, 512),
         'steps': [4, 8, 16, 32, 64, 128, 256],
@@ -107,5 +108,6 @@ if __name__ == '__main__':
         'variance': [0.1, 0.2],
         'clip': False,
     }
-    pb = PriorBox(solver)
-    pb.forward()
+    pb = PriorBox(solver,return_lv_info=True)
+    out = pb.forward()
+    print()

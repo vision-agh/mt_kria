@@ -68,6 +68,10 @@ def set_random_seed(seed, deterministic=False):
 def train():
     args = parse_args()
 
+    if not args.cuda:
+        print("TRAINING ON CPU IS NOT SUPPORTED")
+        return -1
+
     if args.finetune and args.finetune_task:
         train_det = False if args.finetune_task != 'det' else True
         train_seg = False if args.finetune_task != 'seg' else True
@@ -78,7 +82,7 @@ def train():
         train_det = True
         train_seg = True
         train_drivable = True
-        train_depth = True
+        train_depth = False
         train_lane = True
 
     print('Start training')
@@ -249,6 +253,7 @@ def train():
         net = torch.nn.DataParallel(net)
 
     if args.cuda:
+        print("adas")
         net = net.cuda()
         weight_det = weight_det.cuda()
         weight_lane = weight_lane.cuda()
@@ -299,33 +304,40 @@ def train():
     print('Using the specified args:')
     print(args)
 
+    generator=torch.Generator(device='cuda')
+
     if train_det:
         data_loader_det = data.DataLoader(dataset_det, int(args.batch_size),
                                           num_workers=args.num_workers,
                                           shuffle=True, collate_fn=detection_collate,
-                                          pin_memory=True)
+                                          pin_memory=True,
+                                          generator=generator)
 
     if train_seg:
         data_loader_seg = data.DataLoader(dataset_seg, int(args.batch_size),
                                           num_workers=args.num_workers,
                                           shuffle=True, collate_fn=segmentation_collate,
-                                          pin_memory=True)
+                                          pin_memory=True,
+                                          generator=generator)
 
     if train_drivable:
         data_loader_drivable = data.DataLoader(dataset_drivable, int(args.batch_size),
                                                num_workers=args.num_workers,
                                                shuffle=True, collate_fn=segmentation_collate,
-                                               pin_memory=True)
+                                               pin_memory=True,
+                                               generator=generator)
     if train_depth:
         data_loader_depth = data.DataLoader(dataset_depth, int(args.batch_size),
                                             num_workers=args.num_workers,
                                             shuffle=True, collate_fn=depth_collate,
-                                            pin_memory=True)
+                                            pin_memory=True,
+                                            generator=generator)
     if train_lane:
         data_loader_lane = data.DataLoader(dataset_lane, int(args.batch_size),
                                            num_workers=args.num_workers,
                                            shuffle=True, collate_fn=segmentation_collate,
-                                           pin_memory=True)
+                                           pin_memory=True,
+                                           generator=generator)
 
     # create batch iterator
     if train_det:
@@ -409,7 +421,7 @@ def train():
                 _, _, _, _, drivable_data, _, _ = out_drivable
                 # loss_drivable = softmax_focal_loss2d(drivable_data, drivable)
                 if drivable_data.size() != drivable.size():
-                    drivable_data = F.upsample(drivable_data, size=drivable.size()[-2:], mode='bilinear')
+                    drivable_data = F.interpolate(drivable_data, size=drivable.size()[-2:], mode='bilinear')
 
                 loss_drivable = lovasz_softmax_loss_drivable(drivable_data, drivable)
                 loss_drivable = loss_drivable * torch.exp(-weight_drivable)
@@ -435,7 +447,7 @@ def train():
                 out_lane = net(images_lane)
                 _, _, _, _, _, _, lane_data = out_lane
                 if lane_data.size() != lane.size():
-                    lane_data = F.upsample(lane_data, size=lane.size()[-2:], mode='bilinear')
+                    lane_data = F.interpolate(lane_data, size=lane.size()[-2:], mode='bilinear')
                 if args.lane_mode == 'npy':
                     lane_target = lane / 255.
                     loss_lane = torch.nn.BCEWithLogitsLoss(
@@ -479,7 +491,7 @@ def train():
                     depth_data_i = depth_data[di][None]
                     depth_data_i = depth_data_i * focal_lenghts[di][None] / 637.5751
                     if depthmap_i.size() != depth_data_i.size():
-                        depth_data_i = F.upsample(depth_data_i, size=depthmap_i.size()[-2:], mode='nearest')
+                        depth_data_i = F.interpolate(depth_data_i, size=depthmap_i.size()[-2:], mode='nearest')
                     valid_depthmap_i = depthmap_i[mask_i]
                     valid_depthdata_i = depth_data_i[mask_i]
                     valid_depthmap.append(valid_depthmap_i)

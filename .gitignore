@@ -1,0 +1,21 @@
+# python files
+
+.idea/
+**/__pycache__/
+
+# train/val data
+data/
+**/demo_data/
+**/demo/
+
+# models
+float*/
+quantized/
+*.onnx
+*.pth
+*.xmodel
+
+# all results
+**/result/
+**/quantize_result/
+results/*

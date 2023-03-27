@@ -34,7 +34,7 @@ class DrivableSegmentation(data.Dataset):
         self.image_set = image_sets
         self.transform = transform
         self._imgpath = osp.join('%s', 'images', '%s.jpg')
-        self._segpath = osp.join('%s', 'seg', '%s_drivable_id.png')
+        self._segpath = osp.join('%s', 'seg', '%s.png')
         self.ids = list()
         rootpath = osp.join(self.root, self.image_set)
         for line in open(osp.join(rootpath, self.image_set + '.txt')):
@@ -51,6 +51,7 @@ class DrivableSegmentation(data.Dataset):
         img_id = self.ids[index]
         img = cv2.imread(self._imgpath % img_id)
         seg = cv2.imread(self._segpath % img_id, cv2.IMREAD_GRAYSCALE)
+        # seg[seg!=0] = 1 #TODO: PUBL -> uncomment
         height, width, channels = img.shape
 
         if self.transform is not None:

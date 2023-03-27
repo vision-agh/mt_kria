@@ -1,8 +1,0 @@
-.idea/
-**/__pycache__/
-/data/
-float*/
-**/*.avi
-**/result/
-**/quantize_result/
-
