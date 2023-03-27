@@ -15,7 +15,8 @@
 # PART OF THIS FILE AT ALL TIMES.
 
 DATASET=../../data
-WEIGHTS=${1}
+# WEIGHTS=${1}
+WEIGHTS=../../float6/final.pth
 IMG_LIST=val.txt
 IMAGE_ROOT=${DATASET}/multi_task_det5_seg16/depth/kitti
 SAVE_FOLDER=../../results/

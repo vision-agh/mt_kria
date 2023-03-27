@@ -22,9 +22,9 @@ solver = {
     'k2': 8,
     'act_clip_val': 8,
     ' warmup': False,
-    'det_classes': 3,
-    'seg_classes': 16,
-    'drivable_classes': 3,
+    'det_classes': 5,
+    'seg_classes': 6,
+    'drivable_classes': 3, #TODO PUBL -> 2
     'reg_depth': 80,
     'seg_lane': 2,
     'lr_steps': (12000, 18000),
@@ -40,6 +40,7 @@ solver = {
     'clip': False,
 }
 MEANS = (104, 117, 123)
+BBOX_NAMES = ['human', 'light_yellow', 'light_green', 'light_red', 'obstacle']
 
 
 def str2bool(v):
@@ -103,7 +104,7 @@ def parse_args():
     if not os.path.exists(args.save_folder):
         os.mkdir(args.save_folder)
 
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and not args.dump_xmodel:
         if args.device == 'gpu':
             torch.set_default_tensor_type('torch.cuda.FloatTensor')
         else:

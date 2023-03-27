@@ -14,12 +14,15 @@
 
 # PART OF THIS FILE AT ALL TIMES.
 
-DET_ROOT=../../data/multi_task_det5_seg16/detection/Waymo_bdd_txt
+DET_ROOT=../../data/multi_task_det5_seg16/detection
 SEG_ROOT=../../data/multi_task_det5_seg16/segmentation
-DEPTH_ROOT=../../data/multi_task_det5_seg16/depth
-SAVE_FOLDER=${1}
+LANE_ROOT=../../data/multi_task_det5_seg16/lane
+DRIVABLE_ROOT=../../data/multi_task_det5_seg16/drivable
+SAVE_FOLDER=../../float6
+LOAD_FROM=../../float5/iter_44000.pth
 
-shift
 
 echo "Conducting train..."
-python train.py --save_folder "${SAVE_FOLDER}" --DET_ROOT ${DET_ROOT} --SEG_ROOT ${SEG_ROOT} --DEPTH_ROOT ${DEPTH_ROOT} "$@"
+# python train.py --save_folder "${SAVE_FOLDER}" --batch_size 5 --DET_ROOT ${DET_ROOT} --finetune --SEG_ROOT ${SEG_ROOT} --LANE_ROOT ${LANE_ROOT} --DRIVABLE_ROOT ${DRIVABLE_ROOT} --load_from ${LOAD_FROM}"$@"
+# python train.py --save_folder "${SAVE_FOLDER}" --batch_size 5 --DET_ROOT ${DET_ROOT} --finetune --SEG_ROOT ${SEG_ROOT} --LANE_ROOT ${LANE_ROOT} --DRIVABLE_ROOT ${DRIVABLE_ROOT} --start_iter 44000 --resume ${LOAD_FROM}"$@"
+python train.py --save_folder "${SAVE_FOLDER}" --batch_size 5 --DET_ROOT ${DET_ROOT} --SEG_ROOT ${SEG_ROOT} --LANE_ROOT ${LANE_ROOT} --DRIVABLE_ROOT ${DRIVABLE_ROOT} "$@"

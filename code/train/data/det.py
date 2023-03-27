@@ -41,31 +41,26 @@ class DetAnnotationTransform(object):
     def __call__(self, target, width, height):
         res = []
         for line in target:
-            component = line.strip().split(' ')
-            if float(component[2]) >= float(component[4]) or float(component[3]) >= float(component[5]):
-                continue
-            name = component[1].lower()
-            if name in CAR_INCLUDE:
-                name = 'car'
-            elif 'sign' in name.lower():
-                name = 'sign'
-            elif name in PERSON_INCLUDE:
-                name = 'person'
-            else:
-                continue
+            component = line.rstrip().split(' ')
+            name = component[0].lower()
             bndbox = []
 
-            x1 = float(component[2]) / width
-            y1 = float(component[3]) / height
-            x2 = float(component[4]) / width
-            y2 = float(component[5]) / height
+            center_x = float(component[1]) 
+            center_y = float(component[2]) 
+            w_x = float(component[3])
+            w_y = float(component[4]) 
+
+            x1 = (center_x - w_x/2)
+            x2 = (center_x + w_x/2)
+            y1 = (center_y - w_y/2)
+            y2 = (center_y + w_y/2)
 
             bndbox.append(x1)
             bndbox.append(y1)
             bndbox.append(x2)
             bndbox.append(y2)
 
-            label_idx = self.class_to_ind[name]
+            label_idx = int(name)
             bndbox.append(label_idx)
             res += [bndbox]
         target.close()
@@ -110,7 +105,7 @@ class Detection(data.Dataset):
         if self.transform is not None:
             target = np.array(target)
             if len(target.shape) != 2:
-                print("img_id: {}, target.shape: ()".format(self._annopath % img_id, target.shape))
+                print("img_id: {}, target.shape: {}".format(self._annopath % img_id, target.shape))
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
             boxes[:, 0] *= 512.
             boxes[:, 2] *= 512.

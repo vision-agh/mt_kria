@@ -29,9 +29,9 @@ solver = {
     'k2': 8,
     'act_clip_val': 8,
     'warmup': False,
-    'det_classes': 3,
-    'seg_classes': 16,
-    'seg_drivable': 3,
+    'det_classes': 5,
+    'seg_classes': 6,
+    'seg_drivable': 3, #TODO PUBL -> 2
     'seg_lane': 2,
     'reg_depth': 80,
     'lr_steps': (25000, 35000, 45000),

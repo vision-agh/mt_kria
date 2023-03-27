@@ -15,10 +15,10 @@
 # PART OF THIS FILE AT ALL TIMES.
 
 DATASET=../../data
-WEIGHTS=${1}
+WEIGHTS=../../float6/final.pth
 IMG_LIST=val.txt
 IMAGE_ROOT=${DATASET}/multi_task_det5_seg16/drivable/val
-SAVE_FOLDER=../../results/
+SAVE_FOLDER=../../results
 mkdir -p "$SAVE_FOLDER"
 GT_FILE=${DATASET}/multi_task_det5_seg16/drivable/val/seg/
 DT_FILE=${SAVE_FOLDER}/drivable/
@@ -30,7 +30,7 @@ shift
 
 echo "python -W ignore  test.py --i_drive --save_folder ${SAVE_FOLDER} --trained_model ${WEIGHTS}  --image_root ${IMAGE_ROOT} --image_list ${IMG_LIST} --img_mode 2 --eval --quant_mode float "$@"" >> ${TEST_LOG}
 python -W ignore  test.py --i_drive --save_folder ${SAVE_FOLDER} --trained_model ${WEIGHTS}  --image_root ${IMAGE_ROOT} --image_list ${IMG_LIST} --img_mode 2 --eval --quant_mode float "$@"
-python ./evaluation/evaluate_seg.py drivable ${GT_FILE} ${DT_FILE} | tee -a ${TEST_LOG}
+python ./evaluation/evaluate_seg.py drivable ${GT_FILE} ${DT_FILE} | tee ${TEST_LOG}
 echo "Test report is saved to ${TEST_LOG}"
 
 rm -rf "$DT_FILE"

@@ -208,7 +208,13 @@ def compute_detection_ap(results, gts, thresh, overlap_thresh, use_07_metric=Fal
                 false_positive[idx] = 1
                 continue
 
-            gt_bboxes = gt_images[det_images[idx]]['bbox'].astype(float)
+            gt_bboxes_tmp = gt_images[det_images[idx]]['bbox'].astype(float)
+            gt_bboxes = np.zeros_like(gt_bboxes_tmp)
+
+            gt_bboxes[:,0] = (gt_bboxes_tmp[:,0] - gt_bboxes_tmp[:,2]/2) * 512
+            gt_bboxes[:,2] = (gt_bboxes_tmp[:,0] + gt_bboxes_tmp[:,2]/2) * 512
+            gt_bboxes[:,1] = (gt_bboxes_tmp[:,1] - gt_bboxes_tmp[:,3]/2) * 320
+            gt_bboxes[:,3] = (gt_bboxes_tmp[:,1] + gt_bboxes_tmp[:,3]/2) * 320
             gt_hit = gt_images[det_images[idx]]['hit']
             git_difficult = gt_images[det_images[idx]]['difficult']
             det_bbox = det_bboxes[idx, :].astype(float)
@@ -221,8 +227,8 @@ def compute_detection_ap(results, gts, thresh, overlap_thresh, use_07_metric=Fal
                 inter_ymin = np.maximum(gt_bboxes[:, 1], det_bbox[1])
                 inter_xmax = np.minimum(gt_bboxes[:, 2], det_bbox[2])
                 inter_ymax = np.minimum(gt_bboxes[:, 3], det_bbox[3])
-                inter_width = np.maximum(inter_xmax - inter_xmin + 1., 0.)
-                inter_height = np.maximum(inter_ymax - inter_ymin + 1., 0.)
+                inter_width = np.maximum(inter_xmax - inter_xmin , 0.)
+                inter_height = np.maximum(inter_ymax - inter_ymin , 0.)
                 inters = inter_width * inter_height
 
                 # union
@@ -269,7 +275,7 @@ if __name__ == '__main__':
                         help="""Evaluation metric for detection, default map.
                         Options are map (mean average precision), precision (given recall), recall (given precision), 
                         pr (precision and recall given threshold of confidence score).""")
-    parser.add_argument('-detection_iou', default='0.5',
+    parser.add_argument('-detection_iou', default='0.50',
                         help="""Threshold of IOU ratio to
                          determine a match bbox.""")
     parser.add_argument('-detection_thresh', default='0.005',

@@ -103,7 +103,7 @@ def evaluate_lane(gt_dir, result_dir, num_classes=2):
     for key in sorted(gt_dict.keys()):
         gt_path = gt_dict[key]
         result_path = result_dict[key]
-        gt = np.asarray(Image.open(gt_path, 'r'))
+        gt = np.asarray(Image.open(gt_path, 'r'))[:,:,0]
         new_gt = np.zeros_like(gt)
         new_gt[gt > 0] = 1
         gt = new_gt
@@ -122,6 +122,7 @@ def evaluate_lane(gt_dir, result_dir, num_classes=2):
 
 def evaluate_drivable(gt_dir, result_dir):
     return evaluate_segmentation(gt_dir, result_dir, 3)
+    # return evaluate_lane(gt_dir, result_dir, 2) #  TODO UNCOMMENT do publ!!!!
 
 
 def get_ap(recalls, precisions):
@@ -245,13 +246,13 @@ def main():
     if args.task == 'drivable':
         mean, breakdown = evaluate_drivable(args.gt, args.result)
     elif args.task == 'seg':
-        mean, breakdown = evaluate_segmentation(args.gt, args.result, 16)
+        mean, breakdown = evaluate_segmentation(args.gt, args.result, 6)
     elif args.task == 'det':
         mean, breakdown = evaluate_detection(args.gt, args.result)
     elif args.task == 'lane':
         mean, breakdown = evaluate_lane(args.gt, args.result, 2)
 
-    print('{:.2f}'.format(mean),
+    print('miou: {:.2f}'.format(mean),", ious: ",
           ', '.join(['{:.2f}'.format(n) for n in breakdown]))
 
 

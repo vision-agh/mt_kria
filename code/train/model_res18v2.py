@@ -265,12 +265,12 @@ class MTNet(nn.Module):
         x = self.resnet18_32s.layer4(x)
         feature3 = x
 
-        top3 = nn.functional.upsample(self.toplayer3(feature3), scale_factor=2, mode='bilinear')
+        top3 = nn.functional.interpolate(self.toplayer3(feature3), scale_factor=2, mode='bilinear')
         feature2 = self.conv_cat_3(torch.cat([top3, f2], 1))
-        top2 = nn.functional.upsample(self.toplayer2(feature2), scale_factor=2, mode='bilinear')
+        top2 = nn.functional.interpolate(self.toplayer2(feature2), scale_factor=2, mode='bilinear')
         feature1 = self.conv_cat_2(torch.cat([top2, f1], 1))
         nonupsample_top1 = self.toplayer1(feature1)
-        top1 = nn.functional.upsample(nonupsample_top1, scale_factor=2, mode='bilinear')
+        top1 = nn.functional.interpolate(nonupsample_top1, scale_factor=2, mode='bilinear')
 
         feature4 = self.conv_block6(feature3)
         feature5 = self.conv_block7(feature4)
@@ -278,23 +278,23 @@ class MTNet(nn.Module):
         bs = feature6.size(0)
         enfe3 = self.encode_fe3(feature3)
         encode_feture = self.encode_feature(enfe3)
-        encode_feture = nn.functional.upsample(encode_feture, scale_factor=4, mode='bilinear')
-        up_encode_feture = nn.functional.upsample(encode_feture, scale_factor=2,
+        encode_feture = nn.functional.interpolate(encode_feture, scale_factor=4, mode='bilinear')
+        up_encode_feture = nn.functional.interpolate(encode_feture, scale_factor=2,
                                                   mode='bilinear')
         f0_encode_feature_seg = self.encode_layer0_seg(top1)
         # f0_encode_feature_seg = top1 + f0_encode_feature_seg + up_encode_feture
         f0_encode_feature_seg = self.conv_cat_seg2(f0_encode_feature_seg + up_encode_feture)
         seg_feature = self.conv_seg(f0_encode_feature_seg)
-        seg_feature = nn.functional.upsample(seg_feature, scale_factor=2, mode='bilinear')
+        seg_feature = nn.functional.interpolate(seg_feature, scale_factor=2, mode='bilinear')
         logits_2s = self.reg_2s_seg(seg_feature)
-        seg = nn.functional.upsample(logits_2s, scale_factor=2, mode='bilinear')
+        seg = nn.functional.interpolate(logits_2s, scale_factor=2, mode='bilinear')
 
         if self.drivable_classes:
             f0_encode_feature = self.encode_layer0_drivable(top1)
             # drivable_feature = f0_encode_feature + up_encode_feture
             drivable_feature = self.conv_cat_drivable2(f0_encode_feature + up_encode_feture)
             drivable_feature = self.conv_drivable(drivable_feature)
-            drivable_feature = nn.functional.upsample(drivable_feature, scale_factor=2, mode='bilinear')
+            drivable_feature = nn.functional.interpolate(drivable_feature, scale_factor=2, mode='bilinear')
             drivable = self.score_2drivable(drivable_feature)
         else:
             drivable = None
@@ -303,10 +303,10 @@ class MTNet(nn.Module):
             f0_encode_feature_depth = self.encode_layer0_depth(nonupsample_top1)
             f0_encode_feature_depth = self.conv_cat_depth2(
                 f0_encode_feature_depth + self.conv_cat_depth_encode(encode_feture))
-            f0_encode_feature_depth = nn.functional.upsample(f0_encode_feature_depth, scale_factor=2, mode='bilinear')
+            f0_encode_feature_depth = nn.functional.interpolate(f0_encode_feature_depth, scale_factor=2, mode='bilinear')
             depth_feature = self.conv_depth(f0_encode_feature_depth)
-            depth_feature = nn.functional.upsample(depth_feature, scale_factor=2, mode='bilinear')
-            depth = self.reg_2s_depth(depth_feature) * self.max_depth
+            depth_feature = nn.functional.interpolate(depth_feature, scale_factor=2, mode='bilinear')
+            depth = self.reg_2s_depth(depth_feature)
         else:
             depth = None
 
@@ -315,9 +315,9 @@ class MTNet(nn.Module):
             f0_encode_feature_lane = self.conv_cat_lane2(
                 f0_encode_feature_lane + up_encode_feture)
             lane_feature = self.conv_lane(f0_encode_feature_lane)
-            lane_feature = nn.functional.upsample(lane_feature, scale_factor=2, mode='bilinear')
+            lane_feature = nn.functional.interpolate(lane_feature, scale_factor=2, mode='bilinear')
             lane = self.reg_2s_lane(lane_feature)
-            lane = nn.functional.upsample(lane, scale_factor=2, mode='bilinear')
+            lane = nn.functional.interpolate(lane, scale_factor=2, mode='bilinear')
         else:
             lane = None
 

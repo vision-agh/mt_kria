@@ -34,7 +34,7 @@ class LaneSegmentation(data.Dataset):
             self._segpath = osp.join('%s', 'npy', '%s.npy')
         else:
             self._imgpath = osp.join('%s', 'images', '%s.jpg')
-            self._segpath = osp.join('%s', 'seg', '%s_lane_id.png')
+            self._segpath = osp.join('%s', 'seg', '%s.png')
         self.ids = list()
         rootpath = osp.join(self.root, self.image_set)
         for line in open(osp.join(rootpath, self.image_set + '.txt')):

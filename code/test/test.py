@@ -18,7 +18,7 @@ import math
 import os
 import time
 from collections import OrderedDict
-
+# from ptflops import get_model_complexity_info #TODO UNCOMMENT COMPLEXITY INFO
 import cv2
 import imgaug.augmenters as iaa
 import matplotlib.cm as cm
@@ -32,11 +32,11 @@ from mmcv.runner import load_state_dict
 from torch.autograd import Variable
 
 import model_res18v2 as model_res18
-from config import parse_args, solver, MEANS
+from config import parse_args, solver, MEANS, BBOX_NAMES
 from layers import *
 
 labelmap_det = (  # always index 0
-    'car', 'sign', 'person')
+    '0', '1', '2', '3', '4')
 
 args = parse_args()
 
@@ -132,7 +132,7 @@ def write_voc_results_file(all_boxes, ids):
     for cls_ind, cls in enumerate(labelmap_det):
         print('Writing {:s} VOC results file'.format(cls))
         filename = get_voc_results_file_template(cls)
-        with open(filename, 'wt') as f:
+        with open(filename, 'w') as f:
             for im_ind, index in enumerate(ids):
                 dets = all_boxes[cls_ind + 1][im_ind]
                 if dets == []:
@@ -142,8 +142,8 @@ def write_voc_results_file(all_boxes, ids):
                     if dets.shape[1] == 5:
                         f.write('{:s} {:s} {:.8f} {:.8f} {:.8f} {:.8f} {:.8f}\n'.
                                 format(index[1], cls, dets[k, -1],
-                                       dets[k, 0] + 1, dets[k, 1] + 1,
-                                       dets[k, 2] + 1, dets[k, 3] + 1))
+                                       dets[k, 0] , dets[k, 1] ,
+                                       dets[k, 2] , dets[k, 3] ))
                     elif dets.shape[1] == 7:
                         angle_sin = math.asin(dets[k, 4]) / math.pi * 180
                         angle_cos = math.acos(dets[k, 5]) / math.pi * 180
@@ -190,6 +190,7 @@ def test_net(save_folder, net, device, ids, detect, transform, thresh=0.01, has_
         os.mkdir(save_seg_root)
     # timers
     _t = {'im_detect': Timer(), 'misc': Timer()}
+    full_detect_time = []
     for i in range(num_images):
         img_id = ids[i]
         file_path = img_path % img_id
@@ -234,6 +235,7 @@ def test_net(save_folder, net, device, ids, detect, transform, thresh=0.01, has_
             lane_data = None
 
         detect_time = _t['im_detect'].toc(average=False)
+        full_detect_time.append(detect_time)
 
         if seg_data is not None:
             seg_prob = torch.nn.functional.softmax(seg_data, 1)[0].permute(1, 2, 0).cpu().numpy()
@@ -294,12 +296,12 @@ def test_net(save_folder, net, device, ids, detect, transform, thresh=0.01, has_
         if drivable_data is not None:
             drivable_data = np.squeeze(drivable_data.data.max(1)[1].cpu().numpy(), axis=0)
             drivable_data = cv2.resize(drivable_data, im_size, interpolation=cv2.INTER_NEAREST)
-            save_drivable_file = os.path.join(save_drivable_root, img_id[1] + '_drivable_id.png')
+            save_drivable_file = os.path.join(save_drivable_root, img_id[1] + '.png')
             cv2.imwrite(save_drivable_file, drivable_data)
         if lane_data is not None:
             lane_data = np.squeeze(lane_data.data.max(1)[1].cpu().numpy(), axis=0)
             lane_data = cv2.resize(lane_data, im_size, interpolation=cv2.INTER_NEAREST)
-            save_lane_file = os.path.join(save_lane_root, img_id[1] + '_lane_id.png')
+            save_lane_file = os.path.join(save_lane_root, img_id[1] + '.png')
             cv2.imwrite(save_lane_file, lane_data)
         if depth_data is not None:
             pred_depth = depth_data.data.cpu().numpy().squeeze()
@@ -316,14 +318,17 @@ def test_net(save_folder, net, device, ids, detect, transform, thresh=0.01, has_
         print('im_detect: {:d}/{:d} {:.3f}s\r'.format(i + 1,
                                                       num_images, detect_time), end='')
 
+    print(f"DETECTION TIMES: {np.mean(full_detect_time[1:])}")
+    print(f"FPS: {1/np.mean(full_detect_time[1:])}")
+
     if args.i_det:
-        print('Saveing the detection results...')
+        print('Saving the detection results...')
         write_voc_results_file(all_boxes, ids)
 
 
 def get_palette(dataset):
     if dataset == 'bdd' or dataset == 'bdd_toy':
-        return np.array([[0, 0, 0], [217, 83, 70], [91, 192, 222], [255, 0, 0]], dtype=np.uint8)
+        return np.array([[0, 0, 0], [0, 255, 127], [0, 127, 255], [255, 0, 0]], dtype=np.uint8)
     if dataset == 'pascal' or dataset == 'pascal_toy':
         n = 21
         palette = [0] * (n * 3)
@@ -347,6 +352,7 @@ def get_palette(dataset):
 def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=False,
          save_image=True, save_video=None):
     num_images = len(ids)
+    full_detect_time = []
     if args.img_mode == 2:
         img_path = os.path.join('%s', 'images', '%s.jpg')
     elif args.img_mode == 1:
@@ -389,11 +395,16 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
         if args.device == 'gpu':
             x = x.to(device)
         _t['im_detect'].tic()
-        # loc_or, conf_dat, seg_data, drivable_data, depth_data, lane_data = net(x)
-        # conf_dat, centerness = conf_dat
+
+        # ONNX GENERATION
+        # torch.onnx.export(net, x, "model.onnx",output_names=["detection","segmentation", "drivable", "depth", "lane"])
+        # return 0
         if args.quant_mode == 'float':
             loc_or, conf_dat, seg_data, drivable_data, depth_data, lane_data = net(x)
             conf_dat, centerness = conf_dat
+            # loc_0, loc_1, loc_2, loc_3, loc_4, loc_5, loc_6 = loc_or
+            # conf_0, conf_1, conf_2, conf_3, conf_4, conf_5, conf_6 = conf_dat
+            # centerness_0, centerness_1, centerness_2, centerness_3, centerness_4, centerness_5, centerness_6 = centerness
         else:
             loc_0, loc_1, loc_2, loc_3, loc_4, loc_5, loc_6, \
             conf_0, conf_1, conf_2, conf_3, conf_4, conf_5, conf_6, \
@@ -403,6 +414,15 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
             conf_dat = (conf_0, conf_1, conf_2, conf_3, conf_4, conf_5, conf_6)
             centerness = (
                 centerness_0, centerness_1, centerness_2, centerness_3, centerness_4, centerness_5, centerness_6)
+        detect_time = _t['im_detect'].toc(average=False)
+        full_detect_time.append(detect_time)
+
+        # COMPLEXITY INFO GENERATION
+        # macs, params = get_model_complexity_info(net, (3, 320, 512), as_strings=True,
+        #                                    print_per_layer_stat=True, verbose=False)
+        # print('{:<30}  {:<8}'.format('Computational complexity: ', macs))
+        # print('{:<30}  {:<8}'.format('Number of parameters: ', params))
+
         priorbox = PriorBox(solver)
         priors = Variable(priorbox.forward(), volatile=True).to(device)
         loc_ori = list()
@@ -421,8 +441,6 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
         centerness_data = centerness_data.view(centerness_data.size(0), -1, 1).to(device)
         pred = detect(loc_ori, torch.sigmoid(conf_data) * torch.sigmoid(centerness_data), priors)
         detections = pred.data
-        detect_time = _t['im_detect'].toc(average=False)
-
         seg_data = np.squeeze(seg_data.data.max(1)[1].cpu().numpy(), axis=0)
         seg_data = cv2.resize(seg_data, im_size, interpolation=cv2.INTER_NEAREST)
         seg_data_color = np.dstack([seg_data, seg_data, seg_data]).astype(np.uint8)
@@ -465,7 +483,7 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
             normalizer = Normalize(vmin=inverse_depth.min(), vmax=vmax)
             mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
             colormapped_im = (mapper.to_rgba(inverse_depth)[:, :, :3] * 255).astype(np.uint8)
-
+        
         # skip j = 0, because it's the background class
         count = 0
         final_dets = []
@@ -487,7 +505,7 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
                 cls_dets = np.hstack((boxes.cpu().numpy(),
                                       scores[:, np.newaxis])).astype(np.float32,
                                                                      copy=False)
-            all_boxes[j][i] = cls_dets
+            all_boxes[j+1][i] = cls_dets
             count = count + 1
 
         plt.axis('off')
@@ -506,15 +524,20 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
             plt.subplot(2, 2, 3)
             plt.imshow(im_drivable[:, :, ::-1].astype('uint8'))
             plt.axis('off')
-        if colormapped_im is not None:
-            plt.subplot(2, 2, 4)
-            plt.imshow(colormapped_im)
-            plt.axis('off')
+        
+        im_fin = np.array(np.zeros(raw_im.shape))
+        x1 = np.bitwise_and(drivable_data == 0 , lane_data == 0)
+
+        im_fin[x1 == True] = raw_im[x1 == True] 
+        
+        im_fin[drivable_data != 0] = raw_im[drivable_data != 0] / 2 + drivable_data_color_img[drivable_data != 0] / 3
+        im_fin[lane_data != 0] = raw_im[lane_data != 0] / 2 + lane_data_color_img[lane_data != 0] / 2
+
         if lane_data is not None:
             im_lane = im
             im_lane[lane_data == 0] = im[lane_data == 0]
             im_lane[lane_data != 0] = im[lane_data != 0] / 2 + lane_data_color_img[lane_data != 0] / 2
-        count = 0
+        count = 0       
         for boxes, scores in final_dets:
             boxes[:, 0] /= 512
             boxes[:, 2] /= 512
@@ -525,40 +548,31 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
             boxes[:, 1] *= raw_im.shape[0]
             boxes[:, 3] *= raw_im.shape[0]
             for num in range(len(boxes[:, 0])):
-                if count == 0:
-                    if scores[num] > 0.35:
-                        p1 = (boxes[num, 0], boxes[num, 1])
-                        p2 = (boxes[num, 2], boxes[num, 3])
-                        cv2.rectangle(im, p1, p2, (0, 0, 255), 2)
-                        p3 = (max(p1[0], 20), max(p1[1], 20))
-                        title = "%s" % ('Car')
-                        cv2.putText(im, title, p3, cv2.FONT_ITALIC, 0.9, (0, 0, 255), 2)
-                if count == 1:
-                    if scores[num] >= 0.25:
-                        p1 = (boxes[num, 0], boxes[num, 1])
-                        p2 = (boxes[num, 2], boxes[num, 3])
-                        cv2.rectangle(im, p1, p2, (0, 255, 255), 2)
-                        p3 = (max(p1[0], 20), max(p1[1], 20))
-                        title = "%s" % ('Sign')
-                        cv2.putText(im, title, p3, cv2.FONT_ITALIC, 0.9, (0, 255, 255), 2)
-                if count == 2:
-                    if scores[num] >= 0.30:
-                        p1 = (boxes[num, 0], boxes[num, 1])
-                        p2 = (boxes[num, 2], boxes[num, 3])
-                        cv2.rectangle(im, p1, p2, (255, 0, 0), 2)
-                        p3 = (max(p1[0], 20), max(p1[1], 20))
-                        title = "%s" % ('Person')
-                        cv2.putText(im, title, p3, cv2.FONT_ITALIC, 0.9, (255, 0, 0), 2)
+                if scores[num] > 0.35:
+                    p1 = (int(boxes[num, 0]), int(boxes[num, 1]))
+                    p2 = (int(boxes[num, 2]), int(boxes[num, 3]))
+                    cv2.rectangle(im, p1, p2, (0, 0, 255), 2)
+                    cv2.rectangle(im_fin, p1, p2, (0, 0, 255), 2)
+                    p3 = (max(p1[0], 20), max(p1[1], 20))
+                    title = "%s" % (BBOX_NAMES[count])
+                    cv2.putText(im, title, p3, cv2.FONT_ITALIC, 0.9, (0, 0, 255), 2)
+                    cv2.putText(im_fin, title, p3, cv2.FONT_ITALIC, 0.9, (0, 0, 255), 2)
             count += 1
         plt.subplot(2, 2, 1)
         plt.imshow(im[:, :, ::-1].astype('uint8'))
         plt.axis('off')
+        if colormapped_im is not None:
+            plt.subplot(2, 2, 4)
+            plt.imshow(im_fin[:, :, ::-1].astype('uint8'))
+            plt.axis('off')
         print('im_detect: {:d}/{:d} {:.3f}s\r'.format(i + 1,
                                                       num_images, detect_time), end="")
         save_png = os.path.join(save_folder, img_id[1] + '.png')
+        save_fin = save_png.replace(".png","_fin.png")
         plt.subplots_adjust(wspace=0.05, hspace=0.01)
         if save_image:
             plt.savefig(save_png)
+            cv2.imwrite(save_fin, im_fin)
         if save_video:
             fig = plt.gcf()
             fig.canvas.draw()
@@ -573,7 +587,9 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
         plt.close()
     if save_video:
         vout.release()
-    print('Saveing the detection results...')
+    print(f"DETECTION TIMES: {np.mean(full_detect_time[1:])}")
+    print(f"FPS: {1/np.mean(full_detect_time[1:])}")
+    print('Saving the detection results...')
     write_voc_results_file(all_boxes, ids)
 
 
@@ -595,7 +611,7 @@ if __name__ == '__main__':
         device = torch.device("cuda")
         cudnn.benchmark = True
 
-    net = model_res18.build_model(det_classes, seg_classes, drivable_classes, reg_depth, seg_lane).to(device)
+    net = model_res18.build_model(det_classes, seg_classes, drivable_classes, reg_depth, seg_lane, dev=args.device).to(device)
     state_dict = torch.load(args.trained_model, map_location=device)
     if 'model' in state_dict:
         state_dict = state_dict['model']

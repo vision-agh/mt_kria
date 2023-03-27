@@ -15,12 +15,13 @@
 # PART OF THIS FILE AT ALL TIMES.
 
 echo "Preparing dataset..."
-CAL_DATASET=../../data/multi_task_det5_seg16/detection/Waymo_bdd_txt/BDD_Waymo_Cityscape_mixdata/
-WEIGHTS=${1}
+CAL_DATASET=../../data/multi_task_det5_seg16/lane/train/images
+WEIGHTS=../../float6/final.pth
+# WEIGHTS=../../float/pt_MTv3-resnet18_mixed_320_512_25.44G_1.4.pth
 
 
 echo "Conducting calibration test..."
-IMG_LIST=mix_data.txt
+IMG_LIST=train.txt
 
 shift
 
@@ -38,7 +39,7 @@ bash eval_drivable.sh "$WEIGHTS" --quant_mode test "$@"
 echo "Conducting quantized Lane segmentation test..."
 bash eval_lane.sh "$WEIGHTS" --quant_mode test "$@"
 
-echo "Conducting quantized Depth estimation test..."
-bash eval_depth_eigen.sh "$WEIGHTS" --quant_mode test "$@"
+# echo "Conducting quantized Depth estimation test..."
+# bash eval_depth_eigen.sh "$WEIGHTS" --quant_mode test "$@"
 
 #python -W ignore test.py --img_mode 1 --trained_model "${WEIGHTS}" --image_root ${CAL_DATASET} --image_list ${IMG_LIST} --eval --quant_mode test --dump_xmodel "$@"

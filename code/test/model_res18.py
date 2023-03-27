@@ -178,23 +178,23 @@ class MTNet(nn.Module):
         x = self.resnet18_32s.layer4(x)
         feature3 = x
 
-        top3 = nn.functional.upsample(self.toplayer3(feature3), scale_factor=2, mode='bilinear')
+        top3 = nn.functional.interpolate(self.toplayer3(feature3), scale_factor=2, mode='bilinear')
         feature2 = top3 + f2
-        top2 = nn.functional.upsample(self.toplayer2(feature2), scale_factor=2, mode='bilinear')
+        top2 = nn.functional.interpolate(self.toplayer2(feature2), scale_factor=2, mode='bilinear')
         feature1 = top2 + f1
-        top1 = nn.functional.upsample(self.toplayer1(feature1), scale_factor=2, mode='bilinear')
+        top1 = nn.functional.interpolate(self.toplayer1(feature1), scale_factor=2, mode='bilinear')
         feature0 = top1 + f0
 
-        seg_feature = nn.functional.upsample(self.toplayer0(feature0), scale_factor=2, mode='bilinear') + f_2s
+        seg_feature = nn.functional.interpolate(self.toplayer0(feature0), scale_factor=2, mode='bilinear') + f_2s
         logits_2s = self.score_2s(seg_feature)
 
-        seg = nn.functional.upsample(logits_2s, scale_factor=2, mode='bilinear')
+        seg = nn.functional.interpolate(logits_2s, scale_factor=2, mode='bilinear')
 
         if self.drivable_classes:
-            drivable_feature = nn.functional.upsample(self.drivable_toplayer0(feature0), scale_factor=2,
+            drivable_feature = nn.functional.interpolate(self.drivable_toplayer0(feature0), scale_factor=2,
                                                       mode='bilinear') + f_2s
             logits_2drivable = self.score_2drivable(drivable_feature)
-            drivable = nn.functional.upsample(logits_2drivable, scale_factor=2, mode='bilinear')
+            drivable = nn.functional.interpolate(logits_2drivable, scale_factor=2, mode='bilinear')
         else:
             drivable = None
 
