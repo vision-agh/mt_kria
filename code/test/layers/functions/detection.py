@@ -69,25 +69,28 @@ def delta2bbox(rois,
                 [0.0000, 0.3161, 4.1945, 0.6839],
                 [5.0000, 5.0000, 5.0000, 5.0000]])
     """
-    means = deltas.new_tensor(means).view(1, -1).repeat(1, deltas.size(1) // 4)
-    stds = deltas.new_tensor(stds).view(1, -1).repeat(1, deltas.size(1) // 4)
+
+    means = np.asarray(means).reshape(1, -1).repeat(1, deltas.shape[1] // 4)
+    stds = np.asarray(stds).reshape(1, -1).repeat(1, deltas.shape[1] // 4)
     denorm_deltas = deltas * stds + means
     dx = denorm_deltas[:, 0::4]
     dy = denorm_deltas[:, 1::4]
     dw = denorm_deltas[:, 2::4]
     dh = denorm_deltas[:, 3::4]
     max_ratio = np.abs(np.log(wh_ratio_clip))
-    dw = dw.clamp(min=-max_ratio, max=max_ratio)
-    dh = dh.clamp(min=-max_ratio, max=max_ratio)
+    dw = np.clip(dw, -max_ratio, max_ratio)
+    dh = np.clip(dh, -max_ratio, max_ratio)
+
     # Compute center of each roi
-    px = ((rois[:, 0] + rois[:, 2]) * 0.5).unsqueeze(1).expand_as(dx)
-    py = ((rois[:, 1] + rois[:, 3]) * 0.5).unsqueeze(1).expand_as(dy)
+
+    px = np.broadcast_to(np.expand_dims(((rois[:, 0] + rois[:, 2]) * 0.5),axis=1),dx.shape)
+    py = np.broadcast_to(np.expand_dims(((rois[:, 1] + rois[:, 3]) * 0.5),axis=1),dy.shape)
     # Compute width/height of each roi
-    pw = (rois[:, 2] - rois[:, 0]).unsqueeze(1).expand_as(dw)
-    ph = (rois[:, 3] - rois[:, 1]).unsqueeze(1).expand_as(dh)
+    pw = np.broadcast_to(np.expand_dims((rois[:, 2] - rois[:, 0]),axis=1),dw.shape)
+    ph = np.broadcast_to(np.expand_dims((rois[:, 3] - rois[:, 1]),axis=1),dh.shape)
     # Use exp(network energy) to enlarge/shrink each roi
-    gw = pw * dw.exp()
-    gh = ph * dh.exp()
+    gw = pw * np.exp(dw)
+    gh = ph * np.exp(dh)
     # Use network energy to shift the center of each roi
     gx = px + pw * dx
     gy = py + ph * dy
@@ -97,15 +100,15 @@ def delta2bbox(rois,
     x2 = gx + gw * 0.5
     y2 = gy + gh * 0.5
     if max_shape is not None:
-        x1 = x1.clamp(min=0, max=max_shape[1])
-        y1 = y1.clamp(min=0, max=max_shape[0])
-        x2 = x2.clamp(min=0, max=max_shape[1])
-        y2 = y2.clamp(min=0, max=max_shape[0])
-    bboxes = torch.stack([x1, y1, x2, y2], dim=-1).view(deltas.size())
+        x1 = np.clip(x1, 0, max_shape[1])
+        y1 = np.clip(y1, 0, max_shape[0])
+        x2 = np.clip(x2, 0, max_shape[1])
+        y2 = np.clip(y2, 0, max_shape[0])
+    bboxes = np.stack((x1, y1, x2, y2), axis=-1).reshape(deltas.shape)
     return bboxes
 
 
-class Detect(torch.nn.Module):
+class Detect():
     """At test time, Detect is the final layer of SSD.  Decode location preds,
     apply non-maximum suppression to location predictions based on conf
     scores and threshold to a top_k number of output predictions for both
@@ -113,7 +116,6 @@ class Detect(torch.nn.Module):
     """
 
     def __init__(self, num_classes, bkg_label, top_k, conf_thresh, nms_thresh):
-        super().__init__()
         self.num_classes = num_classes
         self.background_label = bkg_label
         self.top_k = top_k
@@ -126,49 +128,52 @@ class Detect(torch.nn.Module):
 
     def forward(self, loc_ori, conf_data, prior_data, bseg_prob=None):
         loc_data = loc_ori[:, :, 0:4]
-        dim = loc_ori.size(2)
+        dim = loc_ori.shape[2]
         if dim == 6:
             ori_data = loc_ori[:, :, 4:6]
-        num = loc_data.size(0)  # batch size
-        num_priors = prior_data.size(0)
-        output = torch.zeros(num, self.num_classes, self.top_k, dim + 1)
-        conf_preds = conf_data.view(num, num_priors,
-                                    self.num_classes).transpose(2, 1)
+        num = loc_data.shape[0]  # batch size
+        num_priors = prior_data.shape[0]
+        output = np.zeros((num, self.num_classes, self.top_k, dim + 1))
 
-        # Decode predictions into bboxes.
+        conf_preds = np.transpose(conf_data.reshape(num, num_priors,
+                                    self.num_classes),axes=(0,2,1))
+
         for i in range(num):
             stds = [self.variance[0], self.variance[0], self.variance[1], self.variance[1]]
             decoded_boxes = delta2bbox(prior_data, loc_data[i], stds=stds, max_shape=(320, 512))
             # For each class, perform nms
-            conf_scores = conf_preds[i].clone()
+            conf_scores = np.copy(conf_preds[i])
             if dim == 6:
-                ori_values = ori_data[i].clone()
+                ori_values = np.copy(ori_data[i])
 
             # seg_prob = bseg_prob[i]
             for cl in range(self.num_classes):
-                c_mask = conf_scores[cl].gt(self.conf_thresh)
+                c_mask = conf_scores[cl].__gt__(self.conf_thresh)
                 scores = conf_scores[cl][c_mask]
-                if scores.dim() == 0:
+                if scores.ndim == 0:
                     continue
-                l_mask = c_mask.unsqueeze(1).expand_as(decoded_boxes)
-                boxes = decoded_boxes[l_mask].view(-1, 4)
+
+                l_mask = np.broadcast_to(np.expand_dims(c_mask,axis=1),decoded_boxes.shape)
+                boxes = decoded_boxes[l_mask].reshape(-1, 4)
                 if dim == 6:
-                    o_mask = c_mask.unsqueeze(1).expand_as(ori_values)
-                    oris = ori_values[o_mask].clamp(min=-1, max=1).view(-1, 2)
+
+                    o_mask = np.broadcast_to(np.expand_dims(c_mask,axis=1),ori_values.shape)
+                    oris = ori_values[o_mask].clamp(min=-1, max=1).reshape(-1, 2)
                 # idx of highest scoring and non-overlapping boxes per class
+
                 ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
 
                 if dim == 4:
                     output[i, cl, :count] = \
-                        torch.cat((scores[ids[:count]].unsqueeze(1),
+                        np.concatenate((np.expand_dims(scores[ids[:count]], 1),
                                    boxes[ids[:count]]), 1)
                 elif dim == 6:
                     output[i, cl, :count] = \
-                        torch.cat((scores[ids[:count]].unsqueeze(1),
+                        np.concatenate((np.expand_dims(scores[ids[:count]], 1),
                                    boxes[ids[:count]],
                                    oris[ids[:count]]), 1)
-        flt = output.contiguous().view(num, -1, dim + 1)
-        _, idx = flt[:, :, 0].sort(1, descending=True)
-        _, rank = idx.sort(1)
-        flt[(rank < self.top_k).unsqueeze(-1).expand_as(flt)].fill_(0)
+        # flt = output.contiguous().reshape(num, -1, dim + 1)
+        # _, idx = flt[:, :, 0].sort(1, descending=True)
+        # _, rank = idx.sort(1)
+        # flt[(rank < self.top_k).unsqueeze(-1).expand_as(flt)].fill_(0)
         return output

@@ -16,6 +16,7 @@
 
 # -*- coding: utf-8 -*-
 import torch
+import numpy as np
 
 
 def point_form(boxes):
@@ -192,57 +193,63 @@ def nms(boxes, scores, overlap=0.5, top_k=200):
     Return:
         The indices of the kept boxes with respect to num_priors.
     """
-
     count = 0
-    keep = scores.new(scores.size(0)).zero_().long()
-    if boxes.numel() == 0:
+    # keep = scores.new(scores.size(0)).zero_().long()
+    keep = np.zeros(scores.shape[0], dtype=np.int_)
+    if boxes.size == 0:
         return keep, count
     x1 = boxes[:, 0]
     y1 = boxes[:, 1]
     x2 = boxes[:, 2]
     y2 = boxes[:, 3]
-    area = torch.mul(x2 - x1, y2 - y1)
-    v, idx = scores.sort(0)  # sort in ascending order
+    area = np.multiply(x2 - x1, y2 - y1)
+    idx = np.argsort(scores, axis=0)
     # I = I[v >= 0.01]
     idx = idx[-top_k:]  # indices of the top-k largest vals
-    xx1 = boxes.new()
-    yy1 = boxes.new()
-    xx2 = boxes.new()
-    yy2 = boxes.new()
-    w = boxes.new()
-    h = boxes.new()
+    xx1 = np.empty_like(boxes)
+    yy1 = np.empty_like(boxes)
+    xx2 = np.empty_like(boxes)
+    yy2 = np.empty_like(boxes)
+    w = np.empty_like(boxes)
+    h = np.empty_like(boxes)
 
     # keep = torch.Tensor()
-    while idx.numel() > 0:
+    # print(idx)
+    while idx.size > 0:
         i = idx[-1]  # index of current largest val
         # keep.append(i)
         keep[count] = i
         count += 1
-        if idx.size(0) == 1:
+        if idx.shape == 1: #TODO na pewno???
             break
         idx = idx[:-1]  # remove kept element from view
         # load bboxes of next highest vals
-        torch.index_select(x1, 0, idx, out=xx1)
-        torch.index_select(y1, 0, idx, out=yy1)
-        torch.index_select(x2, 0, idx, out=xx2)
-        torch.index_select(y2, 0, idx, out=yy2)
+        xx1 = np.take(x1,  idx, axis=0)
+        yy1 = np.take(y1, idx, axis=0)
+        xx2 = np.take(x2, idx, axis=0)
+        yy2 = np.take(y2, idx, axis=0)
+        
         # store element-wise max with next highest score
-        xx1 = torch.clamp(xx1, min=x1[i])
-        yy1 = torch.clamp(yy1, min=y1[i])
-        xx2 = torch.clamp(xx2, max=x2[i])
-        yy2 = torch.clamp(yy2, max=y2[i])
-        w.resize_as_(xx2)
-        h.resize_as_(yy2)
+
+        xx1 = np.clip(xx1, x1[i], None)
+        yy1 = np.clip(yy1, y1[i], None)
+        xx2 = np.clip(xx2, None, x2[i])
+        yy2 = np.clip(yy2, None, y2[i])
+
+        w = np.resize(w,xx2.shape)
+        h = np.resize(h,yy2.shape)
+        
         w = xx2 - xx1
         h = yy2 - yy1
         # check sizes of xx1 and xx2.. after each iteration
-        w = torch.clamp(w, min=0.0)
-        h = torch.clamp(h, min=0.0)
+
+        w = np.clip(w, 0.0, None)
+        h = np.clip(h, 0.0, None)
         inter = w * h
         # IoU = i / (area(a) + area(b) - i)
-        rem_areas = torch.index_select(area, 0, idx)  # load remaining areas)
+        rem_areas = np.take(area, idx, axis=0)
         union = (rem_areas - inter) + area[i]
         IoU = inter / union  # store result in iou
         # keep only elements with an IoU <= overlap
-        idx = idx[IoU.le(overlap)]
+        idx = idx[IoU.__le__(overlap)]
     return keep, count

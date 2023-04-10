@@ -443,8 +443,8 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
         centerness_data = torch.cat([o.view(o.size(0), -1) for o in centerness_data], 1).to(device)
         conf_data = conf_data.view(conf_data.size(0), -1, solver['det_classes']).to(device)
         centerness_data = centerness_data.view(centerness_data.size(0), -1, 1).to(device)
-        pred = detect(loc_ori, torch.sigmoid(conf_data) * torch.sigmoid(centerness_data), priors)
-        detections = pred.data
+        conf = torch.sigmoid(conf_data) * torch.sigmoid(centerness_data)
+        detections = detect.forward(loc_ori.cpu().numpy(), conf.cpu().numpy(), priors.cpu().numpy())
         seg_data = np.squeeze(seg_data.data.max(1)[1].cpu().numpy(), axis=0)
         seg_data = cv2.resize(seg_data, im_size, interpolation=cv2.INTER_NEAREST)
         seg_data_color = np.dstack([seg_data, seg_data, seg_data]).astype(np.uint8)
@@ -491,22 +491,30 @@ def demo(save_folder, net, device, ids, detect, transform, thresh=0.01, has_ori=
         # skip j = 0, because it's the background class
         count = 0
         final_dets = []
-        for j in range(detections.size(1)):
+        for j in range(detections.shape[1]):
             dets = detections[0, j, :]
-            feature_dim = dets.size(1)
-            mask = dets[:, 0].gt(0.).expand(feature_dim, dets.size(0)).t()
-            dets = torch.masked_select(dets, mask).view(-1, feature_dim)
-            if dets.dim() == 0:
+            
+            feature_dim = dets.shape[1]
+
+            mask = dets[:, 0].__gt__(0.)
+            dets_bck = []
+
+            for k in range(mask.shape[0]):
+                if mask[k]:
+                    dets_bck.append(dets[k,:])
+            dets = np.asarray(dets_bck)
+            dets = dets.reshape(-1, feature_dim)
+            if dets.ndim == 0:
                 continue
-            boxes = dets[:, 1:5]
-            scores = dets[:, 0].cpu().numpy()
-            final_dets.append((boxes.cpu().numpy(), scores))
+            boxes = dets[:, 1:5].copy()
+            scores = dets[:, 0].copy()
+            final_dets.append((boxes, scores))
             if has_ori:
-                cls_dets = np.hstack((dets[:, 1:feature_dim].cpu().numpy(),
+                cls_dets = np.hstack((dets[:, 1:feature_dim],
                                       scores[:, np.newaxis])).astype(np.float32,
                                                                      copy=False)
             else:
-                cls_dets = np.hstack((boxes.cpu().numpy(),
+                cls_dets = np.hstack((boxes,
                                       scores[:, np.newaxis])).astype(np.float32,
                                                                      copy=False)
             all_boxes[j+1][i] = cls_dets
@@ -604,7 +612,7 @@ if __name__ == '__main__':
     drivable_classes = solver['drivable_classes']
     reg_depth = solver['reg_depth']
     seg_lane = solver['seg_lane']
-
+    args.val_batch_size = 5
     if args.dump_xmodel:
         args.device = 'cpu'
         args.val_batch_size = 1
