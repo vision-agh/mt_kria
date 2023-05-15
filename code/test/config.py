@@ -24,7 +24,7 @@ solver = {
     ' warmup': False,
     'det_classes': 5,
     'seg_classes': 6,
-    'drivable_classes': 3, #TODO PUBL -> 2
+    'drivable_classes': 2, #TODO PUBL -> 2
     'reg_depth': 80,
     'seg_lane': 2,
     'lr_steps': (12000, 18000),

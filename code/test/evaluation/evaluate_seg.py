@@ -121,8 +121,8 @@ def evaluate_lane(gt_dir, result_dir, num_classes=2):
 
 
 def evaluate_drivable(gt_dir, result_dir):
-    return evaluate_segmentation(gt_dir, result_dir, 3)
-    # return evaluate_lane(gt_dir, result_dir, 2) #  TODO UNCOMMENT do publ!!!!
+    # return evaluate_segmentation(gt_dir, result_dir, 3)
+    return evaluate_lane(gt_dir, result_dir, 2) #  TODO UNCOMMENT do publ!!!!
 
 
 def get_ap(recalls, precisions):
