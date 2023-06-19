@@ -312,3 +312,71 @@ Depth estimation validation image is center-top cropped to aspect ratio 1.78.
 
    
 
+### LICENSE NOTICE
+
+Original repository was downloaded using link provided here:
+https://github.com/Xilinx/Vitis-AI/blob/v2.5/model_zoo/model-list/pt_multitaskv3_mixed_320_512_25.44G_2.5/model.yaml
+
+Original copyright belongs to Xilinx Inc.
+Below files were modified/ added in compliance with Apache 2.0 license: 
+
+```
+code/test/config.py
+code/test/demo_data/demo_list.txt
+code/test/demo_data/images/FRONT_41_157.jpg
+code/test/demo_data/images/frame_0.jpg
+code/test/demo_data/images/frame_289.jpg
+code/test/demo_data/images/frame_4512.jpg
+code/test/demo_data/images/frame_5873.jpg
+code/test/demo_data/images/img_00254.jpg
+code/test/demo_data/images/img_00266.jpg
+code/test/demo_data/images/img_00339.jpg
+code/test/demo_data/images/img_00374.jpg
+code/test/demo_data/images/img_00406.jpg
+code/test/demo_data/images/img_00465.jpg
+code/test/demo_data/images/img_00468.jpg
+code/test/demo_data/images/yolop/frame_0.jpg
+code/test/demo_data/images/yolop/frame_289.jpg
+code/test/demo_data/images/yolop/frame_4512.jpg
+code/test/demo_data/images/yolop/frame_5873.jpg
+code/test/demo_data/images/yolop2/img_00266.jpg
+code/test/demo_data/images/yolop2/img_00339.jpg
+code/test/demo_data/images/yolop2/img_00406.jpg
+code/test/demo_data/images/yolop2/img_00465.jpg
+code/test/eval_depth.sh
+code/test/eval_depth_eigen.sh
+code/test/eval_det.sh
+code/test/eval_drivable.sh
+code/test/eval_lane.sh
+code/test/eval_seg.sh
+code/test/evaluation/evaluate_det.py
+code/test/evaluation/evaluate_seg.py
+code/test/layers/functions/prior_box.py
+code/test/model_res18.py
+code/test/model_res18v2.py
+code/test/resnet.py
+code/test/run_demo.sh
+code/test/run_deploy.sh
+code/test/run_quant.sh
+code/test/test.py
+code/train/data/config.py
+code/train/data/det.py
+code/train/data/drivable_area.py
+code/train/data/lane.py
+code/train/loss.py
+code/train/model.py
+code/train/model_res18v2.py
+code/train/resnet.py
+code/train/train.py
+code/train/train.sh
+code/train/utils/det_augmentations.py
+data/.gitignore
+environment.yml
+```
+
+Files were modified to update the repository to work with newest versions of libraries, and to train and evaluate our own MultiTask V3 model.
+All modifications can be seen in commit history in this repository.
+
+License is available in `LICENSE.txt` file.
+
+
