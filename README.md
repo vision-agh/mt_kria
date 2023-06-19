@@ -372,6 +372,11 @@ code/train/train.sh
 code/train/utils/det_augmentations.py
 data/.gitignore
 environment.yml
+code/test/algo.py
+code/test/lib/box_utils.py
+code/test/lib/detection.py
+code/test/priors.pckl
+code/test/run_algo.sh
 ```
 
 Files were modified to update the repository to work with newest versions of libraries, and to train and evaluate our own MultiTask V3 model.

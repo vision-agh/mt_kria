@@ -14,6 +14,10 @@
 
 # PART OF THIS FILE AT ALL TIMES.
 
+
+# This file has been modified by Maciej Baczmański for usage in https://github.com/maciekbaczmanski/mt_kria repository, under Apache 2.0 license.
+# All files were modified to update the repository to work with newest versions of libraries, and to train and evaluate our own MultiTask V3 model.
+
 from collections import OrderedDict
 # from ptflops import get_model_complexity_info #TODO UNCOMMENT COMPLEXITY INFO
 import cv2
