@@ -20,6 +20,10 @@
 # Written by Lu Tian
 # --------------------------------------------------------
 
+
+# This file has been modified by Maciej Baczmański for usage in https://github.com/maciekbaczmanski/mt_kria repository, under Apache 2.0 license.
+# All files were modified to update the repository to work with newest versions of libraries, and to train and evaluate our own MultiTask V3 model.
+
 import argparse
 
 import numpy as np
