@@ -372,6 +372,10 @@ code/train/train.sh
 code/train/utils/det_augmentations.py
 data/.gitignore
 environment.yml
+code/test/layers/box_utils.py
+code/test/layers/functions/detection.py
+code/test/test.py
+float6/final.pth
 ```
 
 Files were modified to update the repository to work with newest versions of libraries, and to train and evaluate our own MultiTask V3 model.
